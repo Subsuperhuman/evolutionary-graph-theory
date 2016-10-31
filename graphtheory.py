@@ -8,9 +8,7 @@ import random
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x,y)
  
 
-class PyManMain:
-    """The Main PyMan Class - This class handles the main 
-    initialization and creating of the Game."""
+class Simulation:
     
     def __init__(self, width=960,height=540):
         """Initialize"""
@@ -24,10 +22,6 @@ class PyManMain:
         self.graph = Graph(10)
                                                           
     def MainLoop(self):
-        """This is the Main Loop of the Game"""
-        
-        """tell pygame to keep sending up keystrokes when they are
-        held down"""
         pygame.key.set_repeat(500, 30)
         
         """background"""
@@ -103,6 +97,6 @@ class Graph(object):
 
 
 if __name__ == "__main__":
-    MainWindow = PyManMain()
-    MainWindow.MainLoop()
+    Instance = Simulation()
+    Instance.MainLoop()
        
