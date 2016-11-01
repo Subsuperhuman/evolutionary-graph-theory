@@ -51,14 +51,17 @@ class Simulation:
 
     def Tick(self):
     	tNode = self.graph.nodes[random.randint(0,len(self.graph.nodes)-1)]
-    	if tNode.mutated:
-	    	spin = random.randint(1,100)*0.01
-	    	runTot = 0.0
-	    	for conn in tNode.connectionsOut:
-	    		runTot += conn.weight
-	    		if runTot >= spin:
-	    			conn.n2.mutate()
-	    			return;
+    	
+    	spin = random.randint(0,100)*0.01
+    	runTot = 0.0
+    	for conn in tNode.connectionsOut:
+    		runTot += conn.weight
+    		if runTot > spin:
+    			if tNode.mutated:
+    				conn.n2.mutate()
+    			else:
+    				conn.n2.dismutate()
+    			return;
 
 
     def MainLoop(self):
@@ -91,7 +94,7 @@ class Simulation:
             	if node.hover and mc:
             		node.mutate()
 
-            if pygame.time.get_ticks()-lastTick >= 100:
+            if pygame.time.get_ticks()-lastTick >= 1:
             	lastTick = pygame.time.get_ticks()
             	self.Tick()
 
@@ -153,16 +156,23 @@ class Node(object):
 
 		self.x = x
 		self.y = y
-		self.color = (217,91,67)
-		self.hoverColor = (192,41,66)
+		self.normalColor = (217,91,67)
+		self.normalHoverColor = (192,41,66)
 		self.infectedColor = (112,141,145)
 		self.infectedHoverColor = (83,119,122)
+		self.color = self.normalColor
+		self.hoverColor = self.normalHoverColor
 		self.radius = 15
 
 	def mutate(self):
 		self.color = self.infectedColor
 		self.hoverColor = self.infectedHoverColor
 		self.mutated = True
+
+	def dismutate(self):
+		self.color = self.normalColor
+		self.hoverColor = self.normalHoverColor
+		self.mutated = False
 
 
 class Graph(object):
@@ -179,6 +189,12 @@ class Graph(object):
 
 		for iNode in self.nodes:
 			for jNode in self.nodes:
+				if random.randint(0,100) > 50:
+					self.connections.append(Connection(iNode,jNode))
+					iNode.connectionsOut.append(self.connections[-1])
+					jNode.connectionsIn.append(self.connections[-1])
+			if len(iNode.connectionsOut) < 1:
+				jNode = self.nodes[random.randint(0,len(self.nodes)-1)]
 				self.connections.append(Connection(iNode,jNode))
 				iNode.connectionsOut.append(self.connections[-1])
 				jNode.connectionsIn.append(self.connections[-1])
