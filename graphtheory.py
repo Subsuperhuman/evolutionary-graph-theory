@@ -1,26 +1,66 @@
-x = 100
-y = 0
 import sys
 import os
 import pygame
 import time
 import random
-os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x,y)
+import math
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (100,0)
+
+def truncate(f, n):
+    '''Truncates/pads a float f to n decimal places without rounding'''
+    s = '{}'.format(f)
+    if 'e' in s or 'E' in s:
+        return '{0:.{1}f}'.format(f, n)
+    i, p, d = s.partition('.')
+    return '.'.join([i, (d+'0'*n)[:n]])
+
+def normal(a):
+	if a[0] == a[1] == 0:
+		return [0,0]
+	b = [0.,0.]
+	b[0] = -a[1]
+	b[1] = a[0]
+	return b
+
+def mag(a):
+	return math.sqrt(a[0]*a[0] + a[1]*a[1])
+
+def unit(a):
+	if a[0] == a[1] == 0:
+		return [0,0]
+	b = [0.,0.]
+	m = mag(a)
+	b[0] = a[0]/m
+	b[1] = a[1]/m
+	return b
  
 
 class Simulation:
     
-    def __init__(self, width=960,height=540):
+    def __init__(self,nNodes=10, width=960,height=540):
         """Initialize"""
         """Initialize PyGame"""
         pygame.init()
+        self.nNodes = nNodes
         self.width = width
         self.height = height
         self.screen = pygame.display.set_mode((self.width
                                                , self.height))
 
-        self.graph = Graph(10)
-                                                          
+        self.graph = Graph(self.nNodes,self.width,self.height)
+
+    def Tick(self):
+    	tNode = self.graph.nodes[random.randint(0,len(self.graph.nodes)-1)]
+    	if tNode.mutated:
+	    	spin = random.randint(1,100)*0.01
+	    	runTot = 0.0
+	    	for conn in tNode.connectionsOut:
+	    		runTot += conn.weight
+	    		if runTot >= spin:
+	    			conn.n2.mutate()
+	    			return;
+
+
     def MainLoop(self):
         pygame.key.set_repeat(500, 30)
         
@@ -29,30 +69,58 @@ class Simulation:
         self.background = self.background.convert()
         self.background.fill((255,255,255))
         self.screen.blit(self.background, (0, 0))
+
+        lastTick = 0
         
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: 
                     sys.exit()
 
+            mp = pygame.mouse.get_pos()
+            mc = pygame.mouse.get_pressed()[0]
+
             """logic"""
+
+            for node in self.graph.nodes:
+            	dist = [mp[0] - node.x,mp[1] - node.y]
+            	if mag(dist) < node.radius:
+            		node.hover = True
+            	else:
+            		node.hover = False
+            	if node.hover and mc:
+            		node.mutate()
+
+            if pygame.time.get_ticks()-lastTick >= 100:
+            	lastTick = pygame.time.get_ticks()
+            	self.Tick()
 
             """drawing"""
 
             for conn in self.graph.connections:
-            	pygame.draw.line(self.screen, (0,0,0), (conn.n1.x,conn.n1.y), (conn.n2.x, conn.n2.y), 1)
+            	if conn.n1.hover:
+            		ccolor = conn.hoverColor
+            	else:
+            		ccolor = conn.color
+            	pygame.draw.line(self.screen, ccolor, (conn.x1,conn.y1), (conn.x2,conn.y2), 1)
 
             for node in self.graph.nodes:
-            	pygame.draw.circle(self.screen, (0,0,255), (node.x, node.y), 20, 0)
+            	if node.hover:
+            		ncolor = node.hoverColor
+            	else:
+            		ncolor = node.color
+            	pygame.draw.circle(self.screen, ncolor, (node.x, node.y), node.radius, 0)
 
             for conn in self.graph.connections:
-            	font = pygame.font.Font(None,16)
-                text = font.render(str(conn.weight), 1, (0, 0, 0))
-                textpos = text.get_rect(centerx=self.background.get_width()/2)
-                self.screen.blit(text, (conn.n1.x+0.5*(conn.n2.x-conn.n1.x),conn.n1.y+0.5*(conn.n2.y-conn.n1.y)))
+            	if conn.n1.hover:
+	            	font = pygame.font.Font(None,16)
+	                text = font.render(truncate(conn.weight,3), 1, (0, 0, 0))
+	                textpos = text.get_rect(centerx=self.background.get_width()/2)
+	                self.screen.blit(text, (conn.x1+0.5*(conn.x2-conn.x1),conn.y1+0.5*(conn.y2-conn.y1)))
 
 
             pygame.display.flip()
+            self.screen.blit(self.background, (0, 0))
 
 class Connection(object):
 	"""docstring for Connection"""
@@ -61,27 +129,52 @@ class Connection(object):
 		self.n1 = n1
 		self.n2 = n2
 		self.weight = 0
+		self.tweight = 0
+		"""rendering properties"""
+		self.x1 = 0
+		self.x2 = 0
+		self.y1 = 0
+		self.y2 = 0
+		self.color = (236,208,120)
+		self.hoverColor = (84,36,55)
 		
 
 class Node(object):
 	"""docstring for Node"""
 	def __init__(self, x, y):
 		super(Node, self).__init__()
-		self.x = x
-		self.y = y
 		self.connectionsOut = []
 		self.connectionsIn = []
 
+		self.mutated = False
+
+		self.hover = False
+		self.selected = False
+
+		self.x = x
+		self.y = y
+		self.color = (217,91,67)
+		self.hoverColor = (192,41,66)
+		self.infectedColor = (112,141,145)
+		self.infectedHoverColor = (83,119,122)
+		self.radius = 15
+
+	def mutate(self):
+		self.color = self.infectedColor
+		self.hoverColor = self.infectedHoverColor
+		self.mutated = True
+
+
 class Graph(object):
 	"""docstring for Graph"""
-	def __init__(self, nNodes):
+	def __init__(self, nNodes, xsize, ysize):
 		super(Graph, self).__init__()
 		self.nNodes = nNodes
 		self.nodes = []
 		self.connections = []
 		for i in range(nNodes):
-			tX = random.randint(30,930)
-			tY = random.randint(20,520)
+			tX = random.randint(20,xsize-20)
+			tY = random.randint(20,ysize-20)
 			self.nodes.append(Node(tX,tY))
 
 		for iNode in self.nodes:
@@ -89,14 +182,31 @@ class Graph(object):
 				self.connections.append(Connection(iNode,jNode))
 				iNode.connectionsOut.append(self.connections[-1])
 				jNode.connectionsIn.append(self.connections[-1])
-
+		
 		for iNode in self.nodes:
+			totalWeight = 0.0
 			for iConn in iNode.connectionsOut:
-				iConn.weight = 1.0/len(iNode.connectionsOut)
+				iConn.tweight = random.randint(0,100)
+				totalWeight += iConn.tweight
+			invTotalWeight = 1.0/totalWeight if totalWeight > 0 else 0
+			for iConn in iNode.connectionsOut:
+				iConn.weight = invTotalWeight*iConn.tweight
 
-
+		for conn in self.connections:
+				v = (conn.n2.x-conn.n1.x,conn.n2.y-conn.n1.y)
+				unv = unit(normal(v))
+				d = 7
+				conn.x1 = conn.n1.x
+				conn.x2 = conn.n2.x
+				conn.y1 = conn.n1.y
+				conn.y2 = conn.n2.y
+				if conn.n1.x != conn.n2.x and conn.n1.y != conn.n2.y:
+					conn.x1 += d*unv[0]
+					conn.x2 += d*unv[0]
+					conn.y1 += d*unv[1]
+					conn.y2 += d*unv[1]
 
 if __name__ == "__main__":
-    Instance = Simulation()
+    Instance = Simulation(20)
     Instance.MainLoop()
        
