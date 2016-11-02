@@ -57,10 +57,7 @@ class Simulation:
     	for conn in tNode.connectionsOut:
     		runTot += conn.weight
     		if runTot > spin:
-    			if tNode.mutated:
-    				conn.n2.mutate()
-    			else:
-    				conn.n2.dismutate()
+    			conn.n2.populate(conn.n1.genotype)
     			return;
 
 
@@ -72,6 +69,8 @@ class Simulation:
         self.background = self.background.convert()
         self.background.fill((255,255,255))
         self.screen.blit(self.background, (0, 0))
+        mc = False
+        mutant = Genotype(1)
 
         lastTick = 0
         
@@ -81,7 +80,11 @@ class Simulation:
                     sys.exit()
 
             mp = pygame.mouse.get_pos()
+            if(pygame.mouse.get_pressed()[0] and not mc):
+            	mutant = Genotype(1)
+
             mc = pygame.mouse.get_pressed()[0]
+
 
             """logic"""
 
@@ -92,7 +95,7 @@ class Simulation:
             	else:
             		node.hover = False
             	if node.hover and mc:
-            		node.mutate()
+            		node.populate(mutant)
 
             if pygame.time.get_ticks()-lastTick >= 1:
             	lastTick = pygame.time.get_ticks()
@@ -109,9 +112,9 @@ class Simulation:
 
             for node in self.graph.nodes:
             	if node.hover:
-            		ncolor = node.hoverColor
+            		ncolor = node.genotype.hoverColor
             	else:
-            		ncolor = node.color
+            		ncolor = node.genotype.color
             	pygame.draw.circle(self.screen, ncolor, (node.x, node.y), node.radius, 0)
 
             for conn in self.graph.connections:
@@ -125,8 +128,21 @@ class Simulation:
             pygame.display.flip()
             self.screen.blit(self.background, (0, 0))
 
+
+class Genotype(object):
+	"""A mutation instance"""
+	def __init__(self, fitness):
+		super(Genotype, self).__init__()
+		self.fitness = fitness
+		r = random.randint(30,255)
+		g = random.randint(30,255)
+		b = random.randint(30,255)
+		self.color = (r,g,b)
+		self.hoverColor = (r-30,g-30,b-30)
+		
+
 class Connection(object):
-	"""docstring for Connection"""
+	"""A connectin between two nodes"""
 	def __init__(self, n1, n2):
 		super(Connection, self).__init__()
 		self.n1 = n1
@@ -143,8 +159,8 @@ class Connection(object):
 		
 
 class Node(object):
-	"""docstring for Node"""
-	def __init__(self, x, y):
+	"""A graph node"""
+	def __init__(self, x, y, genotype=Genotype(1)):
 		super(Node, self).__init__()
 		self.connectionsOut = []
 		self.connectionsIn = []
@@ -156,27 +172,16 @@ class Node(object):
 
 		self.x = x
 		self.y = y
-		self.normalColor = (217,91,67)
-		self.normalHoverColor = (192,41,66)
-		self.infectedColor = (112,141,145)
-		self.infectedHoverColor = (83,119,122)
-		self.color = self.normalColor
-		self.hoverColor = self.normalHoverColor
+		self.genotype = genotype
 		self.radius = 15
 
-	def mutate(self):
-		self.color = self.infectedColor
-		self.hoverColor = self.infectedHoverColor
-		self.mutated = True
+	def populate(self,genotype):
+		self.genotype = genotype
 
-	def dismutate(self):
-		self.color = self.normalColor
-		self.hoverColor = self.normalHoverColor
-		self.mutated = False
 
 
 class Graph(object):
-	"""docstring for Graph"""
+	"""class for an entire graph instance"""
 	def __init__(self, nNodes, xsize, ysize):
 		super(Graph, self).__init__()
 		self.nNodes = nNodes
