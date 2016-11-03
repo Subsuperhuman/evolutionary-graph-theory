@@ -99,7 +99,7 @@ class Simulation:
             	if node.hover and mc:
             		node.populate(mutant)
 
-            if pygame.time.get_ticks()-lastTick >= 1:
+            if pygame.time.get_ticks()-lastTick >= 1 and not mc:
             	lastTick = pygame.time.get_ticks()
             	self.Tick()
 
@@ -187,6 +187,7 @@ class Graph(object):
 		super(Graph, self).__init__()
 		self.nodes = {}
 		self.connections = []
+		self.separation = 7.0
 
 		if file!=None:
 			with open(file) as data_file:
@@ -220,7 +221,7 @@ class Graph(object):
 
 			for iName,iNode in self.nodes.iteritems():
 				for jName,jNode in self.nodes.iteritems():
-					if random.randint(0,100) >= 50:
+					if random.randint(0,100) >= 0:
 						self.addConnection(iNode,jNode,random.randint(0,100))
 				if len(iNode.connectionsOut) < 1:
 					self.addConnection(iNode,jNode,random.randint(0,100))
@@ -236,16 +237,15 @@ class Graph(object):
 		for conn in self.connections:
 				v = (conn.n2.x-conn.n1.x,conn.n2.y-conn.n1.y)
 				unv = unit(normal(v))
-				d = 7
 				conn.x1 = conn.n1.x
 				conn.x2 = conn.n2.x
 				conn.y1 = conn.n1.y
 				conn.y2 = conn.n2.y
 				if conn.n1.x != conn.n2.x and conn.n1.y != conn.n2.y:
-					conn.x1 += d*unv[0]
-					conn.x2 += d*unv[0]
-					conn.y1 += d*unv[1]
-					conn.y2 += d*unv[1]
+					conn.x1 += self.separation*unv[0]
+					conn.x2 += self.separation*unv[0]
+					conn.y1 += self.separation*unv[1]
+					conn.y2 += self.separation*unv[1]
 
 	def addConnection(self,n1,n2,weight=1):
 		self.connections.append(Connection(n1,n2))
@@ -254,6 +254,6 @@ class Graph(object):
 		self.connections[-1].tweight = weight
 
 if __name__ == "__main__":
-    Instance = Simulation("graph.json")
-    Instance.MainLoop()
+	Instance = Simulation(sys.argv[1] if len(sys.argv) > 1 else None)
+	Instance.MainLoop()
        
