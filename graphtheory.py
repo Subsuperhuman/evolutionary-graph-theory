@@ -6,6 +6,7 @@ import random
 import math
 import json
 from pprint import pprint
+import argparse
 
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (100,0)
 
@@ -254,6 +255,13 @@ class Graph(object):
 		self.connections[-1].tweight = weight
 
 if __name__ == "__main__":
-	Instance = Simulation(sys.argv[1] if len(sys.argv) > 1 else None)
+	parser = argparse.ArgumentParser(description='Short sample app')
+	parser.add_argument('-i', dest='inputfile', action='store',
+		help='set the input json file which defines the graph, random if none')
+	parser.add_argument('-o', dest='outputfile', action='store',
+		help='set the output file, defaults to out')
+
+	results = parser.parse_args()
+	Instance = Simulation(results.inputfile)
 	Instance.MainLoop()
        
