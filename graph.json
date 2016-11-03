@@ -1,0 +1,28 @@
+{
+	"nodes" : [
+		{
+			"name": "A",
+			"position": {"x":100,"y":40},
+			"connections":[
+				{"to":"B","weight":0.5},
+				{"to":"C","weight":0.5}
+			]
+		},
+		{
+			"name": "B",
+			"position": {"x":200,"y":80},
+			"connections":[
+				{"to":"A","weight":0.2},
+				{"to":"C","weight":0.8}
+			]
+		},
+		{
+			"name": "C",
+			"position": {"x":360,"y":100},
+			"connections":[
+				{"to":"A","weight":0.6},
+				{"to":"B","weight":0.4}
+			]
+		}
+	]
+}

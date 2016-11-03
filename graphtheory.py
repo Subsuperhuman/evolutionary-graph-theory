@@ -4,6 +4,9 @@ import pygame
 import time
 import random
 import math
+import json
+from pprint import pprint
+
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (100,0)
 
 def truncate(f, n):
@@ -36,7 +39,7 @@ def unit(a):
  
 
 
- 
+
 
 class Simulation:
     
@@ -163,12 +166,10 @@ class Connection(object):
 
 class Node(object):
 	"""A graph node"""
-	def __init__(self, x, y, genotype=Genotype(1)):
+	def __init__(self,name, x, y, genotype=Genotype(1)):
 		super(Node, self).__init__()
 		self.connectionsOut = []
 		self.connectionsIn = []
-
-		self.mutated = False
 
 		self.hover = False
 		self.selected = False
@@ -190,14 +191,20 @@ class Graph(object):
 		self.nNodes = nNodes
 		self.nodes = []
 		self.connections = []
-		for i in range(nNodes):
-			tX = random.randint(20,xsize-20)
-			tY = random.randint(20,ysize-20)
-			self.nodes.append(Node(tX,tY))
+
+		with open('graph.json') as data_file:
+			data = json.load(data_file)
+			for n in data["nodes"]:
+				self.nodes.append(Node(n["name"],n["position"]["x"],n["position"]["y"]))
+
+		# for i in range(nNodes):
+		# 	tX = random.randint(20,xsize-20)
+		# 	tY = random.randint(20,ysize-20)
+		# 	self.nodes.append(Node(str(i),tX,tY))
 
 		for iNode in self.nodes:
 			for jNode in self.nodes:
-				if random.randint(0,100) > 50:
+				if random.randint(0,100) >= 0:
 					self.connections.append(Connection(iNode,jNode))
 					iNode.connectionsOut.append(self.connections[-1])
 					jNode.connectionsIn.append(self.connections[-1])
@@ -231,6 +238,6 @@ class Graph(object):
 					conn.y2 += d*unv[1]
 
 if __name__ == "__main__":
-    Instance = Simulation(20)
+    Instance = Simulation(6)
     Instance.MainLoop()
        
