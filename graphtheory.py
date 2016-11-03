@@ -37,26 +37,22 @@ def unit(a):
 	b[1] = a[1]/m
 	return b
  
-
-
-
-
 class Simulation:
     
-    def __init__(self,nNodes=10, width=960,height=540):
+    def __init__(self,file=None, width=960,height=540):
         """Initialize"""
         """Initialize PyGame"""
         pygame.init()
-        self.nNodes = nNodes
+        self.file = file
         self.width = width
         self.height = height
         self.screen = pygame.display.set_mode((self.width
                                                , self.height))
 
-        self.graph = Graph(self.nNodes,self.width,self.height)
+        self.graph = Graph(self.file,self.width,self.height)
 
     def Tick(self):
-    	tNode = self.graph.nodes[random.randint(0,len(self.graph.nodes)-1)]
+    	tNode = self.graph.nodes[random.choice(self.graph.nodes.keys())]
     	
     	spin = random.randint(0,100)*0.01
     	runTot = 0.0
@@ -94,7 +90,7 @@ class Simulation:
 
             """logic"""
 
-            for node in self.graph.nodes:
+            for name,node in self.graph.nodes.iteritems():
             	dist = [mp[0] - node.x,mp[1] - node.y]
             	if mag(dist) < node.radius:
             		node.hover = True
@@ -116,7 +112,7 @@ class Simulation:
             		ccolor = conn.color
             	pygame.draw.line(self.screen, ccolor, (conn.x1,conn.y1), (conn.x2,conn.y2), 1)
 
-            for node in self.graph.nodes:
+            for name, node in self.graph.nodes.iteritems():
             	if node.hover:
             		ncolor = node.genotype.hoverColor
             	else:
@@ -154,7 +150,7 @@ class Connection(object):
 		self.n1 = n1
 		self.n2 = n2
 		self.weight = 0
-		self.tweight = 0
+		self.tweight = 1
 		"""rendering properties"""
 		self.x1 = 0
 		self.x2 = 0
@@ -170,6 +166,7 @@ class Node(object):
 		super(Node, self).__init__()
 		self.connectionsOut = []
 		self.connectionsIn = []
+		self.name = name
 
 		self.hover = False
 		self.selected = False
@@ -186,38 +183,51 @@ class Node(object):
 
 class Graph(object):
 	"""class for an entire graph instance"""
-	def __init__(self, nNodes, xsize, ysize):
+	def __init__(self, file=None, xsize=960, ysize=540):
 		super(Graph, self).__init__()
-		self.nNodes = nNodes
-		self.nodes = []
+		self.nodes = {}
 		self.connections = []
 
-		with open('graph.json') as data_file:
-			data = json.load(data_file)
-			for n in data["nodes"]:
-				self.nodes.append(Node(n["name"],n["position"]["x"],n["position"]["y"]))
+		if file!=None:
+			with open(file) as data_file:
+				data = json.load(data_file)
+				for n in data["nodes"]:
+					if "name" in n:
+						self.nodes[n["name"]] = Node (n["name"],
+							n["position"]["x"] if "position" in n and "x" in n["position"] else random.randint(20,xsize-20),
+							n["position"]["y"] if "position" in n and "y" in n["position"] else random.randint(20,ysize-20))
+					else:
+						print("node is missing a name")
 
-		# for i in range(nNodes):
-		# 	tX = random.randint(20,xsize-20)
-		# 	tY = random.randint(20,ysize-20)
-		# 	self.nodes.append(Node(str(i),tX,tY))
+				for n in data["nodes"]:
+					if "name" in n:
+						n1 = self.nodes[n["name"]]
+						if "connections" in n:
+							for c in n["connections"]:
+								if "to" in c:
+									n2 = self.nodes[c["to"]]
+									self.addConnection(n1,n2,c["weight"] if "weight" in c else 1)
+								else:
+									print("connection is missing a target")
+			self.nNodes = len(self.nodes)
 
-		for iNode in self.nodes:
-			for jNode in self.nodes:
-				if random.randint(0,100) >= 0:
-					self.connections.append(Connection(iNode,jNode))
-					iNode.connectionsOut.append(self.connections[-1])
-					jNode.connectionsIn.append(self.connections[-1])
-			if len(iNode.connectionsOut) < 1:
-				jNode = self.nodes[random.randint(0,len(self.nodes)-1)]
-				self.connections.append(Connection(iNode,jNode))
-				iNode.connectionsOut.append(self.connections[-1])
-				jNode.connectionsIn.append(self.connections[-1])
+		else:
+			self.nNodes = random.randint(4,30)
+			for i in range(self.nNodes):
+				tX = random.randint(20,xsize-20)
+				tY = random.randint(20,ysize-20)
+				self.nodes[str(i)] = (Node(str(i),tX,tY))
+
+			for iName,iNode in self.nodes.iteritems():
+				for jName,jNode in self.nodes.iteritems():
+					if random.randint(0,100) >= 50:
+						self.addConnection(iNode,jNode,random.randint(0,100))
+				if len(iNode.connectionsOut) < 1:
+					self.addConnection(iNode,jNode,random.randint(0,100))
 		
-		for iNode in self.nodes:
+		for iName,iNode in self.nodes.iteritems():
 			totalWeight = 0.0
 			for iConn in iNode.connectionsOut:
-				iConn.tweight = random.randint(0,100)
 				totalWeight += iConn.tweight
 			invTotalWeight = 1.0/totalWeight if totalWeight > 0 else 0
 			for iConn in iNode.connectionsOut:
@@ -237,7 +247,13 @@ class Graph(object):
 					conn.y1 += d*unv[1]
 					conn.y2 += d*unv[1]
 
+	def addConnection(self,n1,n2,weight=1):
+		self.connections.append(Connection(n1,n2))
+		n1.connectionsOut.append(self.connections[-1])
+		n2.connectionsIn.append(self.connections[-1])
+		self.connections[-1].tweight = weight
+
 if __name__ == "__main__":
-    Instance = Simulation(6)
+    Instance = Simulation("graph.json")
     Instance.MainLoop()
        

@@ -4,7 +4,7 @@
 			"name": "A",
 			"position": {"x":100,"y":40},
 			"connections":[
-				{"to":"B","weight":0.5},
+				{"to":"B"},
 				{"to":"C","weight":0.5}
 			]
 		},
